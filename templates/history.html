@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#4a90e2">
+    <meta name="description" content="有声书搜索和播放平台">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="有声书">
+    <title>播放历史 - 有声书搜索</title>
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="apple-touch-icon" href="/static/images/icon-192x192.png">
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/history.css">
+    <link rel="stylesheet" href="/static/css/navbar.css">
+    <link rel="stylesheet" href="/static/css/announcement.css">
+    <link rel="stylesheet" href="/static/css/global-player.css">
+</head>
+<body>
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/auth-guard.js"></script>
+    <script src="/static/js/announcement.js"></script>
+    <div class="container">
+        <header>
+            <h1>播放历史</h1>
+        </header>
+        
+        <div class="history-content">
+            <div class="history-header">
+                <h2>最近播放</h2>
+                <button id="clear-history-btn" class="clear-btn">清空历史</button>
+            </div>
+            
+            <div id="history-list" class="history-list">
+                <!-- 历史记录将通过JavaScript动态加载 -->
+            </div>
+            
+            <div id="no-history" class="no-history" style="display: none;">
+                <p>暂无播放历史</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 全局浮动播放器（由 global-player.js 自动创建） -->
+    
+    <!-- 底部导航栏 -->
+    <nav class="bottom-navbar">
+        <div class="bottom-navbar-container">
+            <a href="/" class="nav-item">
+                <span class="nav-item-icon">🏠</span>
+                <span class="nav-item-text">首页</span>
+            </a>
+            <a href="/history" class="nav-item active">
+                <span class="nav-item-icon">📜</span>
+                <span class="nav-item-text">历史</span>
+            </a>
+            <a href="/profile" class="nav-item">
+                <span class="nav-item-icon">👤</span>
+                <span class="nav-item-text">我的</span>
+            </a>
+        </div>
+    </nav>
+    
+    <script>
+        // 渲染播放历史（使用API）
+        async function renderHistory() {
+            const historyList = document.getElementById('history-list');
+            const noHistory = document.getElementById('no-history');
+            
+            try {
+                const response = await HistoryAPI.get();
+                const history = response.history || [];
+                
+                // 如果是本地数据且用户已登录，提示同步
+                if (response.is_local) {
+                    try {
+                        const status = await AuthAPI.getStatus();
+                        if (status.logged_in && history.length > 0) {
+                            // 尝试同步
+                            await HistoryAPI.sync();
+                            // 同步后重新获取
+                            const newResponse = await HistoryAPI.get();
+                            history = newResponse.history || [];
+                        }
+                    } catch (syncError) {
+                        console.error('同步历史记录失败:', syncError);
+                    }
+                }
+                
+                if (history.length === 0) {
+                    historyList.style.display = 'none';
+                    noHistory.style.display = 'block';
+                    return;
+                }
+                
+                historyList.style.display = 'block';
+                noHistory.style.display = 'none';
+                
+                historyList.innerHTML = history.map((item) => {
+                    // 处理播放时间（兼容数据库和本地格式）
+                    let playTime;
+                    try {
+                        const timeStr = item.play_time || item.playTime;
+                        if (timeStr) {
+                            playTime = new Date(timeStr);
+                        } else {
+                            playTime = new Date();
+                        }
+                    } catch {
+                        playTime = new Date();
+                    }
+                    
+                    const timeStr = playTime.toLocaleString('zh-CN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                    
+                    // 本地数据可能没有id，使用索引
+                    const itemId = item.id !== undefined ? item.id : item.index || 0;
+                    
+                    return `
+                        <div class="history-item" data-book-id="${item.book_id}" data-interface="${item.interface}" data-chapter-id="${item.chapter_id}">
+                            <div class="history-book-cover">
+                                <img src="${item.book_image || 'https://via.placeholder.com/80x110?text=封面缺失'}" 
+                                     alt="${item.book_title}" 
+                                     onerror="this.src='https://via.placeholder.com/80x110?text=封面缺失'">
+                            </div>
+                            <div class="history-book-info">
+                                <h3 class="history-book-title">${item.book_title}</h3>
+                                <p class="history-chapter-title">${item.chapter_title}</p>
+                                <p class="history-play-time">${timeStr}</p>
+                            </div>
+                            <div class="history-actions">
+                                <button class="history-delete-btn" onclick="event.stopPropagation(); deleteHistory(${itemId})" title="删除">×</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('获取历史记录失败:', error);
+                historyList.style.display = 'none';
+                noHistory.style.display = 'block';
+                
+                // 检查是否已登录
+                try {
+                    const status = await AuthAPI.getStatus();
+                    if (status.logged_in) {
+                        noHistory.innerHTML = '<p>获取历史记录失败，请刷新页面重试</p>';
+                    } else {
+                        noHistory.innerHTML = '<p>获取历史记录失败，请先登录</p>';
+                    }
+                } catch {
+                noHistory.innerHTML = '<p>获取历史记录失败，请先登录</p>';
+                }
+            }
+        }
+        
+        // 删除历史记录
+        async function deleteHistory(historyId) {
+            if (!confirm('确定要删除这条历史记录吗？')) {
+                return;
+            }
+            
+            try {
+                await HistoryAPI.delete(historyId);
+                renderHistory();
+            } catch (error) {
+                console.error('删除历史记录失败:', error);
+                alert(error.message || '删除失败');
+            }
+        }
+        
+        // 清空历史
+        document.getElementById('clear-history-btn').addEventListener('click', async function() {
+            if (!confirm('确定要清空所有播放历史吗？')) {
+                return;
+            }
+            
+            try {
+                await HistoryAPI.clear();
+                renderHistory();
+            } catch (error) {
+                console.error('清空历史记录失败:', error);
+                alert(error.message || '清空失败');
+            }
+        });
+        
+        // 历史记录项点击事件（带加载提示）
+        document.addEventListener('click', function(e) {
+            const historyItem = e.target.closest('.history-item');
+            if (historyItem && !e.target.closest('.history-delete-btn')) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // 添加点击反馈
+                historyItem.style.opacity = '0.6';
+                historyItem.style.transform = 'scale(0.98)';
+                
+                // 显示加载提示
+                const loadingTip = document.createElement('div');
+                loadingTip.id = 'history-loading-tip';
+                loadingTip.textContent = '正在加载...';
+                loadingTip.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: rgba(0, 0, 0, 0.8);
+                    color: white;
+                    padding: 12px 24px;
+                    border-radius: 8px;
+                    z-index: 10000;
+                    font-size: 14px;
+                    pointer-events: none;
+                    animation: fadeIn 0.2s;
+                `;
+                document.body.appendChild(loadingTip);
+                
+                // 获取跳转信息
+                const bookId = historyItem.dataset.bookId;
+                const interface = historyItem.dataset.interface;
+                const chapterId = historyItem.dataset.chapterId;
+                
+                // 延迟跳转，让用户看到反馈
+                setTimeout(() => {
+                    window.location.href = `/player/${bookId}/${interface}/${chapterId}`;
+                }, 150);
+            }
+        });
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            renderHistory();
+        });
+    </script>
+    <script src="/static/js/global-player.js"></script>
+    <script src="/static/js/pwa-install.js"></script>
+</body>
+</html>
+

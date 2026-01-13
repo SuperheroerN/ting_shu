@@ -1,0 +1,68 @@
+{
+  "name": "有声书搜索",
+  "short_name": "有声书",
+  "description": "有声书搜索和播放平台",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4a90e2",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/static/images/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/images/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/images/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/images/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["entertainment", "books", "music"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "搜索",
+      "short_name": "搜索",
+      "description": "搜索有声书",
+      "url": "/?shortcut=search",
+      "icons": [
+        {
+          "src": "/static/images/icon-96x96.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "历史",
+      "short_name": "历史",
+      "description": "查看播放历史",
+      "url": "/history?shortcut=history",
+      "icons": [
+        {
+          "src": "/static/images/icon-96x96.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}
+
