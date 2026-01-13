@@ -359,8 +359,8 @@ python init_db.py
 
 ## 联系方式
 
-- 项目地址：https://github.com/yourusername/audiobook-website
-- 问题反馈：https://github.com/yourusername/audiobook-website/issues
+- 邮箱：fefigadd@12311111.xyz
+- tg：[Telegram](https://t.me/debugkkk)
 
 ---
 
