@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#4a90e2">
+    <meta name="description" content="有声书搜索和播放平台">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="有声书">
+    <title>个人中心 - 有声书搜索</title>
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="apple-touch-icon" href="/static/images/icon-192x192.png">
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/profile.css">
+    <link rel="stylesheet" href="/static/css/navbar.css">
+    <link rel="stylesheet" href="/static/css/announcement.css">
+    <link rel="stylesheet" href="/static/css/global-player.css">
+</head>
+<body>
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/request-auth.js"></script>
+    <script src="/static/js/auth-guard.js"></script>
+    <script src="/static/js/announcement.js"></script>
+    <script src="/static/js/pwa-install.js"></script>
+    <div class="container">
+        <header>
+            <h1>个人中心</h1>
+        </header>
+        
+        <div class="profile-content">
+            <!-- 登录/未登录状态 -->
+            <div id="login-section" class="login-section">
+                <div class="login-card">
+                    <h2>登录</h2>
+                    <form id="login-form">
+                        <div class="form-group">
+                            <label for="username">用户名</label>
+                            <input type="text" id="username" name="username" placeholder="请输入用户名" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="password">密码</label>
+                            <input type="password" id="password" name="password" placeholder="请输入密码" required>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="remember-login" checked>
+                                记住账号密码并自动登录（保存在本地浏览器）
+                            </label>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">登录</button>
+                            <button type="button" id="show-register-btn" class="btn btn-secondary">注册</button>
+                            <button type="button" id="clear-cache-btn" class="btn btn-secondary">清除已记住账号</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- 注册弹窗 -->
+            <div id="register-modal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>注册新账号</h2>
+                        <button class="modal-close" id="close-register-modal">&times;</button>
+                    </div>
+                    <form id="register-form">
+                        <div class="form-group">
+                            <label for="register-username">用户名</label>
+                            <input type="text" id="register-username" name="register-username" placeholder="请输入用户名（3-20个字符）" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="register-password">密码</label>
+                            <input type="password" id="register-password" name="register-password" placeholder="请输入密码（至少6位）" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="register-password-confirm">确认密码</label>
+                            <input type="password" id="register-password-confirm" name="register-password-confirm" placeholder="请再次输入密码" required>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">注册</button>
+                            <button type="button" class="btn btn-secondary" id="cancel-register-btn">取消</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- 已登录状态 -->
+            <div id="user-section" class="user-section" style="display: none;">
+                <div class="user-info-card">
+                    <div class="user-avatar">
+                        <span class="avatar-icon">👤</span>
+                    </div>
+                    <h2 id="user-name">用户名</h2>
+                    <button id="logout-btn" class="logout-btn">退出登录</button>
+                </div>
+                
+                <div class="stats-section">
+                    <h3>听书统计</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value" id="total-books">0</div>
+                            <div class="stat-label">听过书籍</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="total-chapters">0</div>
+                            <div class="stat-label">听过章节</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="total-time">0小时</div>
+                            <div class="stat-label">听书时长</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="recent-books-section">
+                    <h3>最近听的书籍</h3>
+                    <div id="recent-books-list" class="recent-books-list">
+                        <!-- 最近听的书籍将通过JavaScript动态加载 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 全局浮动播放器（由 global-player.js 自动创建） -->
+    
+    <!-- 底部导航栏 -->
+    <nav class="bottom-navbar">
+        <div class="bottom-navbar-container">
+            <a href="/" class="nav-item">
+                <span class="nav-item-icon">🏠</span>
+                <span class="nav-item-text">首页</span>
+            </a>
+            <a href="/history" class="nav-item">
+                <span class="nav-item-icon">📜</span>
+                <span class="nav-item-text">历史</span>
+            </a>
+            <a href="/profile" class="nav-item active">
+                <span class="nav-item-icon">👤</span>
+                <span class="nav-item-text">我的</span>
+            </a>
+        </div>
+    </nav>
+    
+    <script>
+        // 获取登录后跳转目标
+        function getNextPage() {
+            const params = new URLSearchParams(window.location.search);
+            const next = params.get('next');
+            if (next && next !== '/profile') {
+                return next;
+            }
+            return null;
+        }
+
+        // 渲染用户信息（使用API）
+        async function renderUserInfo() {
+            const loginSection = document.getElementById('login-section');
+            const userSection = document.getElementById('user-section');
+            
+            try {
+                const status = await AuthAPI.getStatus();
+                
+                if (status.logged_in && status.user) {
+                    // 显示用户信息区域，隐藏登录区域
+                    loginSection.style.display = 'none';
+                    userSection.style.display = 'block';
+                    
+                    // 设置用户名
+                    document.getElementById('user-name').textContent = status.user.username;
+                    
+                    // 获取统计数据（即使失败也要显示用户信息）
+                    try {
+                    const statsResponse = await StatsAPI.get();
+                        const stats = statsResponse.stats || {};
+                    const recentBooks = statsResponse.recent_books || [];
+                    
+                        // 更新统计数据
+                        document.getElementById('total-books').textContent = stats.total_books || 0;
+                        document.getElementById('total-chapters').textContent = stats.total_chapters || 0;
+                        document.getElementById('total-time').textContent = (stats.total_hours || 0) + '小时';
+                    
+                    // 渲染最近听的书籍
+                    const recentBooksList = document.getElementById('recent-books-list');
+                    
+                    if (recentBooks.length === 0) {
+                        recentBooksList.innerHTML = '<p class="no-recent-books">暂无最近听的书籍</p>';
+                    } else {
+                        recentBooksList.innerHTML = recentBooks.map(book => `
+                            <div class="recent-book-card" onclick="location.href='/detail/${book.book_id}/${book.interface}'">
+                                <div class="recent-book-cover">
+                                    <img src="${book.book_image || 'https://via.placeholder.com/60x80?text=封面缺失'}" 
+                                         alt="${book.book_title}" 
+                                         onerror="this.src='https://via.placeholder.com/60x80?text=封面缺失'">
+                                </div>
+                                <div class="recent-book-name">${book.book_title}</div>
+                            </div>
+                        `).join('');
+                        }
+                    } catch (statsError) {
+                        console.error('获取统计数据失败:', statsError);
+                        // 即使统计失败，也显示默认值
+                        document.getElementById('total-books').textContent = '0';
+                        document.getElementById('total-chapters').textContent = '0';
+                        document.getElementById('total-time').textContent = '0小时';
+                        document.getElementById('recent-books-list').innerHTML = '<p class="no-recent-books">暂无最近听的书籍</p>';
+                    }
+                } else {
+                    // 未登录，显示登录界面
+                    loginSection.style.display = 'block';
+                    userSection.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('获取用户信息失败:', error);
+                // 出错时显示登录界面
+                loginSection.style.display = 'block';
+                userSection.style.display = 'none';
+            }
+        }
+        
+        // 登录功能
+        document.getElementById('login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const remember = document.getElementById('remember-login').checked;
+            
+            if (!username || !password) {
+                alert('请输入用户名和密码');
+                return;
+            }
+            
+            try {
+                await AuthAPI.login(username, password, { remember });
+                // 清空登录表单
+                document.getElementById('login-form').reset();
+                document.getElementById('remember-login').checked = remember;
+                
+                // 同步本地数据到数据库（双向同步）
+                try {
+                    // 1. 同步书架数据（上传本地数据，然后下载服务器数据到本地）
+                    console.log('开始同步书架数据...');
+                    const bookshelfSyncResult = await BookshelfAPI.sync();
+                    console.log('书架同步结果:', bookshelfSyncResult);
+                    if (bookshelfSyncResult && bookshelfSyncResult.synced_count > 0) {
+                        console.log(`成功同步 ${bookshelfSyncResult.synced_count} 本书到数据库`);
+                    }
+                    
+                    // 2. 同步历史记录（上传本地数据，然后下载服务器数据到本地）
+                    console.log('开始同步历史记录...');
+                    const historySyncResult = await HistoryAPI.sync();
+                    console.log('历史记录同步结果:', historySyncResult);
+                    if (historySyncResult && historySyncResult.synced_count > 0) {
+                        console.log(`成功同步 ${historySyncResult.synced_count} 条历史记录到数据库`);
+                    }
+                    
+                    console.log('数据同步完成，本地缓存已更新');
+                } catch (syncError) {
+                    console.error('同步数据失败:', syncError);
+                    // 同步失败不影响登录流程，但记录错误
+                }
+                
+                // 更新界面显示
+                const nextPage = getNextPage();
+                if (nextPage) {
+                    window.location.href = nextPage;
+                    return;
+                }
+                await renderUserInfo();
+                // 不显示alert，直接切换界面更流畅
+            } catch (error) {
+                alert(error.message || '登录失败');
+            }
+        });
+        
+        // 显示注册弹窗
+        document.getElementById('show-register-btn').addEventListener('click', function() {
+            const modal = document.getElementById('register-modal');
+            modal.style.display = 'block';
+            // 清空注册表单
+            document.getElementById('register-form').reset();
+        });
+        
+        // 关闭注册弹窗
+        function closeRegisterModal() {
+            const modal = document.getElementById('register-modal');
+            modal.style.display = 'none';
+            document.getElementById('register-form').reset();
+        }
+        
+        document.getElementById('close-register-modal').addEventListener('click', closeRegisterModal);
+        document.getElementById('cancel-register-btn').addEventListener('click', closeRegisterModal);
+        
+        // 点击弹窗外部关闭
+        document.getElementById('register-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeRegisterModal();
+            }
+        });
+        
+        // 注册功能
+        document.getElementById('register-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const username = document.getElementById('register-username').value.trim();
+            const password = document.getElementById('register-password').value.trim();
+            const passwordConfirm = document.getElementById('register-password-confirm').value.trim();
+            
+            // 验证用户名
+            if (!username) {
+                alert('请输入用户名');
+                return;
+            }
+            
+            if (username.length < 3 || username.length > 20) {
+                alert('用户名长度应在3-20个字符之间');
+                return;
+            }
+            
+            // 验证密码
+            if (!password) {
+                alert('请输入密码');
+                return;
+            }
+            
+            if (password.length < 6) {
+                alert('密码长度至少6位');
+                return;
+            }
+            
+            // 验证确认密码
+            if (password !== passwordConfirm) {
+                alert('两次输入的密码不一致');
+                return;
+            }
+            
+            try {
+                await AuthAPI.register(username, password, { remember: true });
+                closeRegisterModal();
+                
+                // 同步本地数据到数据库（双向同步）
+                try {
+                    // 1. 同步书架数据（上传本地数据，然后下载服务器数据到本地）
+                    console.log('开始同步书架数据...');
+                    const bookshelfSyncResult = await BookshelfAPI.sync();
+                    console.log('书架同步结果:', bookshelfSyncResult);
+                    if (bookshelfSyncResult && bookshelfSyncResult.synced_count > 0) {
+                        console.log(`成功同步 ${bookshelfSyncResult.synced_count} 本书到数据库`);
+                    }
+                    
+                    // 2. 同步历史记录（上传本地数据，然后下载服务器数据到本地）
+                    console.log('开始同步历史记录...');
+                    const historySyncResult = await HistoryAPI.sync();
+                    console.log('历史记录同步结果:', historySyncResult);
+                    if (historySyncResult && historySyncResult.synced_count > 0) {
+                        console.log(`成功同步 ${historySyncResult.synced_count} 条历史记录到数据库`);
+                    }
+                    
+                    console.log('数据同步完成，本地缓存已更新');
+                } catch (syncError) {
+                    console.error('同步数据失败:', syncError);
+                    // 同步失败不影响注册流程，但记录错误
+                }
+                
+                // 更新界面显示
+                const nextPage = getNextPage();
+                if (nextPage) {
+                    window.location.href = nextPage;
+                    return;
+                }
+                await renderUserInfo();
+                // 不显示alert，直接切换界面更流畅
+            } catch (error) {
+                alert(error.message || '注册失败');
+            }
+        });
+        
+        // 退出登录
+        document.getElementById('logout-btn').addEventListener('click', async function() {
+            if (!confirm('确定要退出登录吗？')) {
+                return;
+            }
+            
+            try {
+                // 退出前，先同步服务器数据到本地缓存
+                console.log('退出登录前，同步服务器数据到本地...');
+                try {
+                    // 1. 同步书架数据到本地
+                    const bookshelfData = await BookshelfAPI.get();
+                    if (bookshelfData && bookshelfData.books && bookshelfData.books.length > 0) {
+                        localStorage.setItem('bookshelf', JSON.stringify(bookshelfData.books));
+                        console.log('已缓存书架数据到本地，共', bookshelfData.books.length, '本');
+                    }
+                    
+                    // 2. 同步历史记录到本地
+                    const historyData = await HistoryAPI.get();
+                    if (historyData && historyData.history && historyData.history.length > 0) {
+                        // 将服务器数据转换为本地格式
+                        const localFormat = historyData.history.map(item => ({
+                            book_id: item.book_id,
+                            interface: item.interface,
+                            chapter_id: item.chapter_id,
+                            chapter_title: item.chapter_title || '',
+                            book_title: item.book_title || '',
+                            book_image: item.book_image || '',
+                            book_anchor: item.book_anchor || '',
+                            playTime: item.play_time || new Date().toISOString()
+                        }));
+                        localStorage.setItem('playHistory', JSON.stringify(localFormat));
+                        console.log('已缓存历史记录到本地，共', localFormat.length, '条');
+                    }
+                    
+                    console.log('数据已同步到本地缓存');
+                } catch (syncError) {
+                    console.error('同步数据到本地失败:', syncError);
+                    // 即使同步失败也继续退出
+                }
+                
+                // 执行退出登录
+                await AuthAPI.logout({ clearCache: false });
+                location.reload();
+            } catch (error) {
+                console.error('退出登录失败:', error);
+                location.reload();
+            }
+        });
+
+        // 清除已缓存的登录信息
+        document.getElementById('clear-cache-btn').addEventListener('click', function() {
+            if (!window.AuthCache) return;
+            AuthCache.clearCachedAuthCredentials();
+            alert('已清除本地记住的账号密码');
+        });
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', async function() {
+            let autoLoggedIn = false;
+            // 尝试自动登录以便无需重复输入
+            if (AuthAPI && AuthAPI.autoLoginFromCache) {
+                const auto = await AuthAPI.autoLoginFromCache();
+                autoLoggedIn = auto && auto.success;
+            }
+            await renderUserInfo();
+
+            // 根据后台配置控制注册入口显示（开放注册 / 禁止注册）
+            try {
+                if (AuthAPI && AuthAPI.getAuthConfig) {
+                    const config = await AuthAPI.getAuthConfig();
+                    const allowRegister = (config.allow_register !== false); // 默认允许
+                    const showRegisterBtn = document.getElementById('show-register-btn');
+                    if (showRegisterBtn) {
+                        showRegisterBtn.style.display = allowRegister ? 'inline-block' : 'none';
+                    }
+                }
+            } catch (e) {
+                console.warn('获取注册配置失败，保持默认显示注册按钮:', e);
+            }
+
+            // 如果携带next参数且已登录，自动跳转回目标页
+            const nextPage = getNextPage();
+            if (nextPage) {
+                try {
+                    const status = await AuthAPI.getStatus();
+                    if (status.logged_in || autoLoggedIn) {
+                        window.location.href = nextPage;
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            }
+        });
+    </script>
+    <script src="/static/js/global-player.js"></script>
+</body>
+</html>
+

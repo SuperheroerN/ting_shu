@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M4A格式测试</title>
+    <link rel="stylesheet" href="/static/css/player.css">
+</head>
+<body>
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/auth-guard.js"></script>
+    <div class="container">
+        <h1>M4A格式播放器测试</h1>
+        <p>此页面用于测试自定义播放器是否支持M4A格式音频文件。</p>
+        
+        <div class="audio-player-container">
+            <audio id="audio-player" preload="metadata">
+                <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
+                您的浏览器不支持音频播放。
+            </audio>
+            
+            <!-- 自定义音频播放器控件 -->
+            <div id="custom-player-controls" class="custom-player-controls">
+                <!-- 播放控制区域 -->
+                <div class="player-control-section">
+                    <!-- 播放/暂停按钮 -->
+                    <button id="custom-play-pause-btn" class="custom-player-btn play-pause-btn">
+                        <span class="play-icon">▶</span>
+                        <span class="pause-icon">⏸</span>
+                    </button>
+                    
+                    <!-- 进度条区域 -->
+                    <div class="progress-container">
+                        <span id="current-time" class="time-display">00:00</span>
+                        <div class="progress-bar-wrapper">
+                            <div id="progress-bar" class="progress-bar">
+                                <div id="progress-filled" class="progress-filled"></div>
+                            </div>
+                        </div>
+                        <span id="duration" class="time-display">00:00</span>
+                    </div>
+                </div>
+                
+                <!-- 音量控制区域 -->
+                <div class="volume-control-section">
+                    <button id="custom-mute-btn" class="custom-player-btn volume-btn">
+                        <span class="volume-icon">🔊</span>
+                        <span class="muted-icon">🔇</span>
+                    </button>
+                    <div class="volume-slider-container">
+                        <input type="range" id="custom-volume-slider" class="volume-slider" min="0" max="1" step="0.01" value="1">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <h2>测试音频列表</h2>
+        <ul>
+            <li><button onclick="changeAudio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3')">MP3格式测试</button></li>
+            <li><button onclick="changeAudio('https://file-examples.com/storage/fe5a92c8c2640a85bd1c877/2017/11/file_example_MP3_700KB.mp3')">MP3格式测试2</button></li>
+            <li><button onclick="changeAudio('https://file-examples.com/storage/fe5a92c8c2640a85bd1c877/2017/11/file_example_M4A_1MG.m4a')">M4A格式测试</button></li>
+        </ul>
+    </div>
+    
+    <script>
+        // 获取DOM元素
+        const audio = document.getElementById('audio-player');
+        const customPlayPauseBtn = document.getElementById('custom-play-pause-btn');
+        const customMuteBtn = document.getElementById('custom-mute-btn');
+        const customVolumeSlider = document.getElementById('custom-volume-slider');
+        const progressBar = document.getElementById('progress-bar');
+        const progressFilled = document.getElementById('progress-filled');
+        const currentTimeDisplay = document.getElementById('current-time');
+        const durationDisplay = document.getElementById('duration');
+        
+        // 格式化时间为MM:SS格式
+        function formatTime(time) {
+            if (isNaN(time)) return '00:00';
+            const minutes = Math.floor(time / 60);
+            const seconds = Math.floor(time % 60);
+            return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+        
+        // 更新播放进度条
+        function updateProgress() {
+            if (!isNaN(audio.duration)) {
+                const progressPercent = (audio.currentTime / audio.duration) * 100;
+                progressFilled.style.width = `${progressPercent}%`;
+                currentTimeDisplay.textContent = formatTime(audio.currentTime);
+            }
+        }
+        
+        // 设置音频总时长
+        function setDuration() {
+            durationDisplay.textContent = formatTime(audio.duration);
+        }
+        
+        // 播放/暂停切换
+        function togglePlayPause() {
+            if (audio.paused) {
+                audio.play().then(() => {
+                    customPlayPauseBtn.classList.add('playing');
+                }).catch(error => {
+                    console.error('播放失败:', error);
+                });
+            } else {
+                audio.pause();
+                customPlayPauseBtn.classList.remove('playing');
+            }
+        }
+        
+        // 静音切换
+        function toggleMute() {
+            audio.muted = !audio.muted;
+            customMuteBtn.classList.toggle('muted', audio.muted);
+        }
+        
+        // 音量变化
+        function handleVolumeChange() {
+            audio.volume = customVolumeSlider.value;
+            // 如果音量不为0但处于静音状态，则取消静音
+            if (audio.volume > 0 && audio.muted) {
+                audio.muted = false;
+                customMuteBtn.classList.remove('muted');
+            }
+        }
+        
+        // 进度条点击事件
+        function handleProgressClick(e) {
+            const progressBarRect = progressBar.getBoundingClientRect();
+            const clickPosition = (e.clientX - progressBarRect.left) / progressBarRect.width;
+            audio.currentTime = clickPosition * audio.duration;
+        }
+        
+        // 切换音频源
+        function changeAudio(sourceUrl) {
+            console.log('切换音频源:', sourceUrl);
+            // 重置播放器状态
+            customPlayPauseBtn.classList.remove('playing');
+            progressFilled.style.width = '0%';
+            currentTimeDisplay.textContent = '00:00';
+            durationDisplay.textContent = '00:00';
+            
+            // 设置新的音频源
+            audio.src = sourceUrl;
+            
+            // 自动播放新音频
+            audio.play().then(() => {
+                customPlayPauseBtn.classList.add('playing');
+            }).catch(error => {
+                console.error('播放失败:', error);
+            });
+        }
+        
+        // 绑定事件监听器
+        customPlayPauseBtn.addEventListener('click', togglePlayPause);
+        customMuteBtn.addEventListener('click', toggleMute);
+        customVolumeSlider.addEventListener('input', handleVolumeChange);
+        customVolumeSlider.addEventListener('change', handleVolumeChange);
+        progressBar.addEventListener('click', handleProgressClick);
+        
+        // 音频事件监听器
+        audio.addEventListener('timeupdate', updateProgress);
+        audio.addEventListener('loadedmetadata', setDuration);
+        audio.addEventListener('loadedmetadata', updateProgress);
+        
+        audio.addEventListener('play', () => {
+            customPlayPauseBtn.classList.add('playing');
+        });
+        
+        audio.addEventListener('pause', () => {
+            customPlayPauseBtn.classList.remove('playing');
+        });
+        
+        // 确保播放结束时更新按钮状态
+        audio.addEventListener('ended', () => {
+            customPlayPauseBtn.classList.remove('playing');
+        });
+    </script>
+</body>
+</html>
