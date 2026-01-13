@@ -1,6 +1,8 @@
 # 有声书播放网站
-
+免费听书
 一个功能完整的有声书播放网站，支持多接口搜索、章节管理、音频播放、历史记录和书架功能。
+开源版本为标准版适合个人和小团体使用，后台配置完善的接口添加，可以解析市面百分之八十听书接口，你也可以自行独立扩展接口添加更具兼容性
+本项目只提供开源。
 
 ## 版本对比
 
@@ -357,8 +359,8 @@ python init_db.py
 
 ## 联系方式
 
-- 项目地址：https://github.com/yourusername/audiobook-website
-- 问题反馈：https://github.com/yourusername/audiobook-website/issues
+- 邮箱：fefigadd@12311111.xyz
+- tg：[Telegram](https://t.me/debugkkk)
 
 ---
 
